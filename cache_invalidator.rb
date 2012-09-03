@@ -2,10 +2,16 @@ require 'rubygems' if RUBY_VERSION < "1.9"
 require 'sinatra/base'
 
 class CacheInvalidator < Sinatra::Base
-  configure do
-    set :username, ENV["USERNAME"] || "usablecacheinvalidator"
-    set :password, ENV["PASSWORD"] || "knowledgevolution"
-    set :cache_root, ENV["CACHE_ROOT"] || "#{settings.root}/tmp"
+  configure(:production) do
+    set :username, ENV["CI_USERNAME"]
+    set :password, ENV["CI_PASSWORD"]
+    set :cache_root, ENV["CI_CACHE_ROOT"]
+  end
+
+  configure(:development, :test) do
+    set :username, ENV["CI_USERNAME"] || "usablecacheinvalidator"
+    set :password, ENV["CI_PASSWORD"] || "knowledgevolution"
+    set :cache_root, ENV["CI_CACHE_ROOT"] || "#{settings.root}/tmp"
   end
 
   helpers do
@@ -24,12 +30,18 @@ class CacheInvalidator < Sinatra::Base
 
   post '/invalidate' do
     protected!
-    filename = "#{settings.cache_root}/#{params["filename"]}"
-    if File.exists?(filename)
-      File.delete(filename)
-      "File \"#{filename}\" was successfully deleted."
+    if settings.cache_root.to_s.strip == "" # No .blank? method.
+      "CACHE_ROOT environment variable is not defined."
+    elsif params["filename"].to_s.strip == ""
+      "Please specify a filename as parameter."
     else
-      "File \"#{filename}\" not found."
+      filename = "#{settings.cache_root}/#{params["filename"].gsub("../", "")}"
+      if File.exists?(filename)
+        File.delete(filename)
+        "File \"#{filename}\" was successfully deleted."
+      else
+        "File \"#{filename}\" not found."
+      end
     end
   end
 end
