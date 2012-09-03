@@ -31,8 +31,10 @@ class CacheInvalidator < Sinatra::Base
   post '/invalidate' do
     protected!
     if settings.cache_root.to_s.strip == "" # No .blank? method.
+      status 422
       "CACHE_ROOT environment variable is not defined."
     elsif params["filename"].to_s.strip == ""
+      status 422
       "Please specify a filename as parameter."
     else
       filename = "#{settings.cache_root}/#{params["filename"].gsub("../", "")}"
@@ -40,6 +42,7 @@ class CacheInvalidator < Sinatra::Base
         File.delete(filename)
         "File \"#{filename}\" was successfully deleted."
       else
+        status 422
         "File \"#{filename}\" not found."
       end
     end
